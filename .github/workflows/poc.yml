@@ -1,4 +1,4 @@
-name: POC
+name: POCc
 on: push
 jobs:
   prepare: 
