@@ -40,13 +40,18 @@ jobs:
           for ID in $JOB_IDS
           do
             echo "::group::JOB: ${ID}"
-            FAIL_MESSAGES=$(gh api repos/{owner}/{repo}/check-runs/${ID}/annotations --jq ".[] | select( .annotation_level | contains(\"failure\") ) | .message")
+            ANNOTATIONS=$(gh api repos/{owner}/{repo}/check-runs/${ID}/annotations)
+            jq . <<< $ANNOTATIONS
+            FAIL_MESSAGES=$(jq ".[] | select( .annotation_level | contains(\"failure\") ) | .message" <<< $ANNOTATIONS)
             grep -q "${{ env.TARGET }}" <<< "$FAIL_MESSAGES" && RESULT=true
-            echo "\n::endgroup::"
+            echo "" # empty line
+            echo "::endgroup::"
           done
+
           if [[ "$RESULT" == "true" ]]
           then
-            echo Job Failed because '"'$FAIL_MESSAGES'"'
+            echo Job Failed because '"'${{ env.TARGET }}'"'
+            gh run rerun ${{ github.run_id }} --failed
           else
             echo Not Found!
           fi
