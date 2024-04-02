@@ -29,15 +29,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: GH commands
+      - name: Failure annotation contains string
         env:
+          TARGET: Process completed with exit code 2
           GH_TOKEN: ${{ github.token }}
         run: |
+          set +e # prevent exit on error
           JOB_IDS=$(gh run view ${{ github.run_id }} --json jobs --jq '.jobs[].databaseId')
+          RESULT=false
           for ID in $JOB_IDS
           do
             echo "::group::JOB: ${ID}"
-            gh api repos/{owner}/{repo}/check-runs/${ID}/annotations
-            echo "::endgroup::"
+            FAIL_MESSAGES=$(gh api repos/{owner}/{repo}/check-runs/${ID}/annotations --jq ".[] | select( .annotation_level | contains(\"failure\") ) | .message")
+            grep -q "${{ TARGET }}" <<< "$FAIL_MESSAGES" && RESULT=true
+            echo "\n::endgroup::"
           done
+          if [[ "$RESULT" == "true" ]]
+          then
+            echo Job Failed because '"'$FAIL_MESSAGES'"'
+          else
+            echo Not Found!
+          fi
   
