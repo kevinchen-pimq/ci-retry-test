@@ -1,0 +1,31 @@
+name: POC
+on: push
+jobs:
+  prepare: 
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo prepare
+        shell: bash
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [prepare]
+    steps:
+      - run: echo build
+        shell: bash
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - run: echo deploy
+        shell: bash
+
+  retry:
+    runs-on: ubuntu-latest
+    needs: [prepare, build, deploy]
+    if: ${{ always() }}
+    steps:
+      - run: echo retry
+        shell: bash
+  
