@@ -41,7 +41,7 @@ jobs:
           do
             echo "::group::JOB: ${ID}"
             FAIL_MESSAGES=$(gh api repos/{owner}/{repo}/check-runs/${ID}/annotations --jq ".[] | select( .annotation_level | contains(\"failure\") ) | .message")
-            grep -q "${{ TARGET }}" <<< "$FAIL_MESSAGES" && RESULT=true
+            grep -q "${{ env.TARGET }}" <<< "$FAIL_MESSAGES" && RESULT=true
             echo "\n::endgroup::"
           done
           if [[ "$RESULT" == "true" ]]
