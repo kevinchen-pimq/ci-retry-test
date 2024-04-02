@@ -26,9 +26,18 @@ jobs:
     needs: [prepare, build, deploy]
     if: ${{ always() }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: GH commands
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run view ${{ github.run_id }} --json jobs
+          JOB_IDS=$(gh run view ${{ github.run_id }} --json jobs --jq '.jobs[].databaseId')
+          for ID in $JOB_IDS
+          do
+            echo "::group::JOB: ${ID}"
+            gh api repos/{owner}/{repo}/check-runs/${ID}/annotations
+            echo "::endgroup::"
+          done
   
