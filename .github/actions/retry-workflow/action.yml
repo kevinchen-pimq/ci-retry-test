@@ -16,6 +16,9 @@ inputs:
     required: false
     default: 'tirgger_rerun.yml'
 
+env:
+  GH_TOKEN: ${{ github.token }}
+
 runs:
   using: composite
   steps:
