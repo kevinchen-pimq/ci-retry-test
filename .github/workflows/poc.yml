@@ -1,4 +1,4 @@
-name: POCc
+name: POC
 on: push
 jobs:
   prepare: 
@@ -12,7 +12,7 @@ jobs:
     steps:
       - run: |
           echo build
-          sleep 20
+          # sleep 20
           exit 2
 
   deploy:
@@ -24,7 +24,7 @@ jobs:
   retry:
     runs-on: ubuntu-latest
     needs: [prepare, build, deploy]
-    if: ${{ always() }}
+    if: ${{ failure() }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
