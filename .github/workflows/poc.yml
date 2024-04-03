@@ -29,39 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Failure annotation contains string
-        env:
-          TARGET: Process completed with exit code 2
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set +e # prevent exit on error
-          
-          ATTEMPS=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq ".run_attempt")
-          if [[ "$ATTEMPS" -ge 3 ]]
-          then
-            echo "::error::Workflow Run exceed max attemps 3. Try manual rerun."
-            exit 1
-          fi
-
-          JOB_IDS=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[].id')
-          RESULT=false
-          for ID in $JOB_IDS
-          do
-            echo "::group::JOB: ${ID}"
-            ANNOTATIONS=$(gh api repos/{owner}/{repo}/check-runs/${ID}/annotations)
-            jq . <<< $ANNOTATIONS
-            FAIL_MESSAGES=$(jq ".[] | select( .annotation_level | contains(\"failure\") ) | .message" <<< $ANNOTATIONS)
-            grep -q "${{ env.TARGET }}" <<< "$FAIL_MESSAGES" && RESULT=true
-            echo "" # empty line
-            echo "::endgroup::"
-          done
-
-          if [[ "$RESULT" == "true" ]]
-          then
-            echo Job Failed because '"'${{ env.TARGET }}'"'
-            echo Trigger rerun 
-            gh workflow run tirgger_rerun.yml --field run_id=${{ github.run_id }}
-          else
-            echo Not Found!
-          fi
-  
+      - name: Retry workflow
+        uses: ./.github/actions/retry-workflow
+        with:
+          target-error: Process completed with exit code 2

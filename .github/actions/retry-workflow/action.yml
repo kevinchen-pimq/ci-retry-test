@@ -1,0 +1,58 @@
+name: retry-workflow
+description: Retry workflow if target error happened
+
+inputs:
+  target-error:
+    description: Target error message to find
+    required: true
+  
+  max-attempts:
+    description: Max workflow retry attempts
+    required: false
+    default: '3'
+  
+  rerun-workflow-file:
+    description: Workflow file which can trigger rerun
+    required: false
+    default: 'tirgger_rerun.yml'
+
+runs:
+  using: composite
+  steps:
+    - name: Check attempts
+      run: |
+        ATTEMPTS=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq ".run_attempt")
+        if [[ "$ATTEMPTS" -ge ${{ inputs.max-attempts }} ]]
+        then
+          echo "::error::Workflow Run exceed max attempts ${{ inputs.max-attempts }}. Try manual rerun."
+          exit 1
+        fi
+        echo Workflow Run attempts=$ATTEMPTS
+      shell: bash
+
+    - name: Check is rerun condition met
+      run: |
+        set +e # prevent exit on error
+
+        JOB_IDS=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[].id')
+        RESULT=false
+        for ID in $JOB_IDS
+        do
+          echo "::group::Job: ${ID}"
+          ANNOTATIONS=$(gh api repos/{owner}/{repo}/check-runs/${ID}/annotations)
+          jq . <<< $ANNOTATIONS
+          FAIL_MESSAGES=$(jq ".[] | select( .annotation_level | contains(\"failure\") ) | .message" <<< $ANNOTATIONS)
+          grep -q "${{ inputs.target-error }}" <<< "$FAIL_MESSAGES" && RESULT=true
+          echo "" # empty line
+          echo "::endgroup::"
+        done
+
+        if [[ "$RESULT" == "true" ]]
+        then
+          echo Job Failed because '"'${{ inputs.target-error }}'"'
+          echo Trigger rerun 
+          gh workflow run ${{ inputs.rerun-workflow-file }} --field run_id=${{ github.run_id }}
+        else
+          echo Condition not met!
+        fi
+      shell: bash
