@@ -16,13 +16,12 @@ inputs:
     required: false
     default: 'tirgger_rerun.yml'
 
-env:
-  GH_TOKEN: ${{ github.token }}
-
 runs:
   using: composite
   steps:
     - name: Check attempts
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         ATTEMPTS=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq ".run_attempt")
         if [[ "$ATTEMPTS" -ge ${{ inputs.max-attempts }} ]]
@@ -34,6 +33,8 @@ runs:
       shell: bash
 
     - name: Check is rerun condition met
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         set +e # prevent exit on error
 
