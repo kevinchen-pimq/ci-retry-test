@@ -13,7 +13,7 @@ jobs:
       - run: |
           echo build
           # sleep 20
-          exit 2
+          # exit 2
 
   deploy:
     runs-on: ubuntu-latest
