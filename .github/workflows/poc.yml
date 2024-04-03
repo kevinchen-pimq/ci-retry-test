@@ -35,7 +35,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set +e # prevent exit on error
-          JOB_IDS=$(gh run view ${{ github.run_id }} --json jobs --jq '.jobs[].databaseId')
+          
+          ATTEMPS=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }} --jq ".run_attempt")
+          if [[ "$ATTEMPS" -ge 3 ]]
+          then
+            echo "::error::Workflow Run exceed max attemps 3. Try manual rerun."
+            exit 1
+          fi
+
+          JOB_IDS=$(gh api /repos/{owner}/{repo}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[].id')
           RESULT=false
           for ID in $JOB_IDS
           do
@@ -51,7 +59,8 @@ jobs:
           if [[ "$RESULT" == "true" ]]
           then
             echo Job Failed because '"'${{ env.TARGET }}'"'
-            gh run rerun ${{ github.run_id }} --failed
+            echo Trigger rerun 
+            gh workflow run tirgger_rerun.yml --field run_id=${{ github.run_id }}
           else
             echo Not Found!
           fi
